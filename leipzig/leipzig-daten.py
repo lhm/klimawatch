@@ -7,7 +7,7 @@ def emissions_historic(population):
     data = [
         (2011, 2012, 2013, 2014, 2015, 2016, 'Bereiche'),
         (6.42, 6.45, 6.63, 6.21, 6.15, 5.96, 'Gesamt'),
-        (3.13, 3.05, 3.21, 3.04, 2.93, 2.79, 'Wirtschaft und kommunale Einrichtungen'),
+        (3.13, 3.05, 3.21, 3.04, 2.93, 2.79, 'Wirtschaft und Kommune'),
         (1.90, 2.02, 2.06, 1.79, 1.83, 1.81, 'Haushalte'),
         (1.39, 1.37, 1.37, 1.38, 1.39, 1.36, 'Verkehr')
     ]
@@ -83,7 +83,7 @@ def emission_targets(population):
 
 def emissions_reference():
     emissions_1990 = pd.DataFrame([
-        {'year': 1990, 'category': 'Wirtschaft und kommunale Einrichtungen', 'per_capita': 4.83},
+        {'year': 1990, 'category': 'Wirtschaft und Kommune', 'per_capita': 4.83},
         {'year': 1990, 'category': 'Haushalte', 'per_capita': 4.79},
         {'year': 1990, 'category': 'Verkehr', 'per_capita': 1.69},
         {'year': 1990, 'category': 'Gesamt', 'per_capita': 11.31}
