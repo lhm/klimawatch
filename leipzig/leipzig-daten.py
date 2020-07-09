@@ -2,6 +2,8 @@
 import pandas as pd
 import numpy as np
 
+pd.set_option("display.max_rows", 100)
+
 # %%
 #
 # Emissions 2011-2017 from CO2 Bilanz
@@ -42,24 +44,33 @@ emissions
 
 # %%
 #
-# Current population
+# Population historic
 #
 
-data = {
-    "year": [2019],
-    "category": ["Einwohner"],
-    "value": [593145],
-    "type": ["Einwohner"],
-    "note": "latest",
-}
-population_historic = pd.DataFrame(data=data).set_index("year")
+data = pd.read_csv(
+    "./12411-0015_flat.csv",
+    encoding="latin1",
+    sep=";",
+    usecols=["Zeit", "BEVSTD__Bevoelkerungsstand__Anzahl"],
+    na_values="-",
+    parse_dates=["Zeit"],
+)
+data.rename(columns={"BEVSTD__Bevoelkerungsstand__Anzahl": "value"}, inplace=True)
+data = data.groupby("Zeit").sum()
+data["year"] = data.index.year
+
+population_historic = data.reset_index().set_index("year")[["value"]]
+population_historic.loc[1990, "value"] = 557300
+
+population_historic["category"] = "Einwohner"
+population_historic["type"] = "Einwohner"
+population_historic.loc[2019, "note"] = "latest"
 
 population_historic
 
-
 # %%
 #
-# Population forecast data; needed to translate per-capita goals
+# Population forecast; needed to translate per-capita goals
 #
 
 parse_thousands = lambda x: (int(float(x.replace(",", ".")) * 1000))
@@ -102,26 +113,37 @@ goals
 
 # %%
 #
-# Reference emissions 1990
+# Historic emissions
 #
 
-emissions_1990 = pd.DataFrame(
-    [
-        {"year": 1990, "category": "Wirtschaft", "per_capita": 4.83},
-        {"year": 1990, "category": "Private Haushalte", "per_capita": 4.79},
-        {"year": 1990, "category": "Verkehr", "per_capita": 1.69},
-        {"year": 1990, "category": "Gesamt", "per_capita": 11.31},
-    ]
+years = [1990, 1998, 2005, 2008]
+data = {
+    "Private Haushalte": [4.79, 2.32, 1.83, 1.81],
+    "Wirtschaft": [4.83, 2.66, 2.52, 2.24],
+    "Verkehr": [1.69, 2.03, 1.79, 1.48],
+}
+
+emissions_historic = pd.DataFrame(data=data, index=years)
+emissions_historic["population"] = population_historic.loc[
+    emissions_historic.index.values, "value"
+]
+emissions_historic["Gesamt"] = emissions_historic[
+    ["Private Haushalte", "Wirtschaft", "Verkehr"]
+].sum(axis=1)
+
+emissions_historic.index.name = "year"
+emissions_historic = emissions_historic.reset_index().melt(
+    id_vars=["year", "population"], value_name="per_capita", var_name="category"
 )
-emissions_1990.set_index("year", inplace=True)
 
-population_1990 = 557300
-emissions_1990["value"] = emissions_1990["per_capita"] * population_1990 / 1000
-emissions_1990["type"] = "real"
-emissions_1990["note"] = "Klimaschutzkonzept 2014-2020"
+emissions_historic["value"] = (
+    emissions_historic.population * emissions_historic.per_capita / 1000
+)
+emissions_historic["type"] = "real"
+emissions_historic["note"] = "Klimaschutzkonzept 2014-2020"
+emissions_historic = emissions_historic.set_index("year")
 
-emissions_1990
-
+emissions_historic
 # %%
 #
 # Consolidate into single DataFrame
@@ -131,18 +153,20 @@ columns = ["category", "type", "value", "note"]
 consolidated = pd.DataFrame(columns=columns)
 
 # emission data
-consolidated = consolidated.append(emissions_1990[columns])
+consolidated = consolidated.append(emissions_historic[columns])
 consolidated = consolidated.append(emissions[columns])
 
 # emission goals
 consolidated = consolidated.append(goals[columns])
 
 # population
-consolidated = consolidated.append(population_historic)
+consolidated = consolidated.append(population_historic.loc[2019])
 
 # add header for year
 consolidated.index.name = "year"
 
+# rename "value" to "co2"
+consolidated.rename(columns={"value": "co2"}, inplace=True)
 
 consolidated
 
@@ -151,4 +175,4 @@ consolidated
 # write CSV
 #
 
-consolidated.to_csv("leipzig-new.csv")
+consolidated.to_csv("leipzig.csv")
